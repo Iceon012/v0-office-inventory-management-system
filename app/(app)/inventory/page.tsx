@@ -3,6 +3,7 @@ import { and, desc, eq, ilike, lte, or, type SQL } from "drizzle-orm"
 import { db, inventoryItems, categories } from "@/lib/db"
 import { requireUser } from "@/lib/auth.server"
 import { canManageInventory } from "@/lib/auth"
+import { safeQuery } from "@/lib/db/safe-query"
 import { PageHeader } from "@/components/app/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -39,7 +40,11 @@ export default async function InventoryPage({
   const cat = sp.cat ?? "all"
   const status = sp.status ?? "all"
 
-  const allCategories = await db.select().from(categories).orderBy(categories.name)
+  const allCategories = await safeQuery(
+    () => db.select().from(categories).orderBy(categories.name),
+    [],
+    "loading categories",
+  )
 
   const conditions: SQL[] = []
   if (q) {
@@ -52,23 +57,28 @@ export default async function InventoryPage({
     conditions.push(lte(inventoryItems.quantity, inventoryItems.minStock))
   }
 
-  const items = await db
-    .select({
-      id: inventoryItems.id,
-      name: inventoryItems.name,
-      sku: inventoryItems.sku,
-      quantity: inventoryItems.quantity,
-      minStock: inventoryItems.minStock,
-      unitPrice: inventoryItems.unitPrice,
-      location: inventoryItems.location,
-      updatedAt: inventoryItems.updatedAt,
-      categoryName: categories.name,
-      categoryId: categories.id,
-    })
-    .from(inventoryItems)
-    .leftJoin(categories, eq(inventoryItems.categoryId, categories.id))
-    .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(inventoryItems.updatedAt))
+  const items = await safeQuery(
+    () =>
+      db
+        .select({
+          id: inventoryItems.id,
+          name: inventoryItems.name,
+          sku: inventoryItems.sku,
+          quantity: inventoryItems.quantity,
+          minStock: inventoryItems.minStock,
+          unitPrice: inventoryItems.unitPrice,
+          location: inventoryItems.location,
+          updatedAt: inventoryItems.updatedAt,
+          categoryName: categories.name,
+          categoryId: categories.id,
+        })
+        .from(inventoryItems)
+        .leftJoin(categories, eq(inventoryItems.categoryId, categories.id))
+        .where(conditions.length ? and(...conditions) : undefined)
+        .orderBy(desc(inventoryItems.updatedAt)),
+    [],
+    "loading inventory items",
+  )
 
   return (
     <>
