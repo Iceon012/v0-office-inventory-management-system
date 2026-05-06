@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { desc, eq } from "drizzle-orm"
 import { db, notifications } from "@/lib/db"
-import { requireUser } from "@/lib/auth"
+import { requireUser } from "@/lib/auth.server"
 import { PageHeader } from "@/components/app/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatDate } from "@/lib/format"

@@ -9,7 +9,8 @@ import {
   inventoryItems,
   users,
 } from "@/lib/db"
-import { requireUser, canApproveRequests } from "@/lib/auth"
+import { requireUser } from "@/lib/auth.server"
+import { canApproveRequests } from "@/lib/auth"
 import { PageHeader } from "@/components/app/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

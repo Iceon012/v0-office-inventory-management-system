@@ -1,6 +1,7 @@
 import { sql, eq } from "drizzle-orm"
 import { db, categories, inventoryItems } from "@/lib/db"
-import { requireUser, canManageInventory } from "@/lib/auth"
+import { requireUser } from "@/lib/auth.server"
+import { canManageInventory } from "@/lib/auth"
 import { PageHeader } from "@/components/app/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

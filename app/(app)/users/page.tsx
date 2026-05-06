@@ -1,5 +1,5 @@
 import { db, users } from "@/lib/db"
-import { requireRole } from "@/lib/auth"
+import { requireRole } from "@/lib/auth.server"
 import { PageHeader } from "@/components/app/page-header"
 import { Card } from "@/components/ui/card"
 import {

@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app/app-sidebar"
 import { Topbar } from "@/components/app/topbar"
-import { requireUser } from "@/lib/auth"
+import { requireUser } from "@/lib/auth.server"
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await requireUser()

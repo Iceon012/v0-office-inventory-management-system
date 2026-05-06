@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { and, eq } from "drizzle-orm"
 import { db, notifications } from "@/lib/db"
-import { requireUser } from "@/lib/auth"
+import { requireUser } from "@/lib/auth.server"
 
 export async function markAllReadAction() {
   const user = await requireUser()

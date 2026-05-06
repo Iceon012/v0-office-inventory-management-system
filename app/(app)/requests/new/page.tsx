@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/auth"
+import { requireUser } from "@/lib/auth.server"
 import { db, inventoryItems } from "@/lib/db"
 import { PageHeader } from "@/components/app/page-header"
 import { RequestForm } from "@/components/app/request-form"

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { eq } from "drizzle-orm"
 import { db, inventoryItems, categories } from "@/lib/db"
-import { requireRole } from "@/lib/auth"
+import { requireRole } from "@/lib/auth.server"
 import { PageHeader } from "@/components/app/page-header"
 import { InventoryForm } from "@/components/app/inventory-form"
 import { updateItemAction } from "../../actions"

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { eq } from "drizzle-orm"
 import { db, inventoryItems } from "@/lib/db"
-import { requireRole } from "@/lib/auth"
+import { requireRole } from "@/lib/auth.server"
 import { logAction } from "@/lib/audit"
 
 export type ItemFormState = { error?: string; ok?: boolean }

@@ -10,7 +10,7 @@ import {
   inventoryItems,
   users,
 } from "@/lib/db"
-import { requireUser, requireRole } from "@/lib/auth"
+import { requireUser, requireRole } from "@/lib/auth.server"
 import { logAction, notify } from "@/lib/audit"
 
 export async function createRequestAction(formData: FormData) {
