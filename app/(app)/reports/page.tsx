@@ -7,6 +7,7 @@ import {
   requestItems,
 } from "@/lib/db"
 import { requireUser } from "@/lib/auth.server"
+import { safeQuery } from "@/lib/db/safe-query"
 import { PageHeader } from "@/components/app/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ReportsCharts } from "@/components/app/reports-charts"
@@ -17,41 +18,56 @@ export const dynamic = "force-dynamic"
 export default async function ReportsPage() {
   await requireUser()
 
-  const byCategory = await db
-    .select({
-      category: categories.name,
-      itemCount: sql<number>`count(${inventoryItems.id})::int`,
-      totalQty: sql<number>`coalesce(sum(${inventoryItems.quantity}),0)::int`,
-      totalValue: sql<string>`coalesce(sum(${inventoryItems.quantity} * ${inventoryItems.unitPrice}),0)::text`,
-    })
-    .from(inventoryItems)
-    .leftJoin(categories, eq(inventoryItems.categoryId, categories.id))
-    .groupBy(categories.name)
-    .orderBy(desc(sql`coalesce(sum(${inventoryItems.quantity} * ${inventoryItems.unitPrice}),0)`))
+  const byCategory = await safeQuery(
+    () =>
+      db
+        .select({
+          category: categories.name,
+          itemCount: sql<number>`count(${inventoryItems.id})::int`,
+          totalQty: sql<number>`coalesce(sum(${inventoryItems.quantity}),0)::int`,
+          totalValue: sql<string>`coalesce(sum(${inventoryItems.quantity} * ${inventoryItems.unitPrice}),0)::text`,
+        })
+        .from(inventoryItems)
+        .leftJoin(categories, eq(inventoryItems.categoryId, categories.id))
+        .groupBy(categories.name)
+        .orderBy(desc(sql`coalesce(sum(${inventoryItems.quantity} * ${inventoryItems.unitPrice}),0)`)),
+    [],
+    "loading category reports",
+  )
 
   // Requests over the last 30 days, grouped by day
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-  const requestsTrend = await db
-    .select({
-      day: sql<string>`to_char(date_trunc('day', ${requests.createdAt}), 'Mon DD')`,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(requests)
-    .where(gte(requests.createdAt, thirtyDaysAgo))
-    .groupBy(sql`date_trunc('day', ${requests.createdAt})`)
-    .orderBy(sql`date_trunc('day', ${requests.createdAt})`)
+  const requestsTrend = await safeQuery(
+    () =>
+      db
+        .select({
+          day: sql<string>`to_char(date_trunc('day', ${requests.createdAt}), 'Mon DD')`,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(requests)
+        .where(gte(requests.createdAt, thirtyDaysAgo))
+        .groupBy(sql`date_trunc('day', ${requests.createdAt})`)
+        .orderBy(sql`date_trunc('day', ${requests.createdAt})`),
+    [],
+    "loading requests trend",
+  )
 
   // Top requested items
-  const topItems = await db
-    .select({
-      name: inventoryItems.name,
-      total: sql<number>`coalesce(sum(${requestItems.quantityRequested}),0)::int`,
-    })
-    .from(requestItems)
-    .leftJoin(inventoryItems, eq(requestItems.itemId, inventoryItems.id))
-    .groupBy(inventoryItems.name)
-    .orderBy(desc(sql`coalesce(sum(${requestItems.quantityRequested}),0)`))
-    .limit(8)
+  const topItems = await safeQuery(
+    () =>
+      db
+        .select({
+          name: inventoryItems.name,
+          total: sql<number>`coalesce(sum(${requestItems.quantityRequested}),0)::int`,
+        })
+        .from(requestItems)
+        .leftJoin(inventoryItems, eq(requestItems.itemId, inventoryItems.id))
+        .groupBy(inventoryItems.name)
+        .orderBy(desc(sql`coalesce(sum(${requestItems.quantityRequested}),0)`))
+        .limit(8),
+    [],
+    "loading top items",
+  )
 
   const totalValue = byCategory.reduce((s, c) => s + Number.parseFloat(c.totalValue), 0)
 
