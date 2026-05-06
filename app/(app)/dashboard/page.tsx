@@ -15,93 +15,123 @@ import { Button } from "@/components/ui/button"
 import { Package, AlertTriangle, ClipboardList, DollarSign, Plus, ArrowRight } from "lucide-react"
 import { StockBadge, RequestStatusBadge } from "@/components/app/stock-badge"
 import { formatCurrency, formatRelative } from "@/lib/format"
+import { safeQuery } from "@/lib/db/safe-query"
 
 export const dynamic = "force-dynamic"
 
 export default async function DashboardPage() {
   const user = await requireUser()
 
-  const [stats] = await db
-    .select({
-      itemCount: sql<number>`count(*)::int`,
-      totalQty: sql<number>`coalesce(sum(${inventoryItems.quantity}),0)::int`,
-      totalValue: sql<string>`coalesce(sum(${inventoryItems.quantity} * ${inventoryItems.unitPrice}),0)::text`,
-      lowStock: sql<number>`count(*) filter (where ${inventoryItems.quantity} <= ${inventoryItems.minStock})::int`,
-      outOfStock: sql<number>`count(*) filter (where ${inventoryItems.quantity} <= 0)::int`,
-    })
-    .from(inventoryItems)
+  const stats = await safeQuery(
+    () =>
+      db
+        .select({
+          itemCount: sql<number>`count(*)::int`,
+          totalQty: sql<number>`coalesce(sum(${inventoryItems.quantity}),0)::int`,
+          totalValue: sql<string>`coalesce(sum(${inventoryItems.quantity} * ${inventoryItems.unitPrice}),0)::text`,
+          lowStock: sql<number>`count(*) filter (where ${inventoryItems.quantity} <= ${inventoryItems.minStock})::int`,
+          outOfStock: sql<number>`count(*) filter (where ${inventoryItems.quantity} <= 0)::int`,
+        })
+        .from(inventoryItems),
+    [{ itemCount: 0, totalQty: 0, totalValue: "0", lowStock: 0, outOfStock: 0 }],
+    "loading inventory stats",
+  )
 
-  const [{ pending }] = await db
-    .select({ pending: sql<number>`count(*)::int` })
-    .from(requests)
-    .where(eq(requests.status, "pending"))
+  const statsRow = stats[0] || { itemCount: 0, totalQty: 0, totalValue: "0", lowStock: 0, outOfStock: 0 }
 
-  const lowStockItems = await db
-    .select({
-      id: inventoryItems.id,
-      name: inventoryItems.name,
-      sku: inventoryItems.sku,
-      quantity: inventoryItems.quantity,
-      minStock: inventoryItems.minStock,
-      categoryName: categories.name,
-    })
-    .from(inventoryItems)
-    .leftJoin(categories, eq(inventoryItems.categoryId, categories.id))
-    .where(lte(inventoryItems.quantity, inventoryItems.minStock))
-    .orderBy(inventoryItems.quantity)
-    .limit(6)
+  const pendingResult = await safeQuery(
+    () =>
+      db
+        .select({ pending: sql<number>`count(*)::int` })
+        .from(requests)
+        .where(eq(requests.status, "pending")),
+    [{ pending: 0 }],
+    "loading pending requests",
+  )
 
-  const recentRequests = await db
-    .select({
-      id: requests.id,
-      status: requests.status,
-      purpose: requests.purpose,
-      createdAt: requests.createdAt,
-      requesterName: users.fullName,
-      requesterEmail: users.email,
-    })
-    .from(requests)
-    .leftJoin(users, eq(requests.requesterId, users.id))
-    .orderBy(desc(requests.createdAt))
-    .limit(5)
+  const pending = pendingResult[0]?.pending ?? 0
 
-  const recentActivity = await db
-    .select({
-      id: auditLogs.id,
-      action: auditLogs.action,
-      entityType: auditLogs.entityType,
-      createdAt: auditLogs.createdAt,
-      actorName: users.fullName,
-      actorEmail: users.email,
-    })
-    .from(auditLogs)
-    .leftJoin(users, eq(auditLogs.actorId, users.id))
-    .orderBy(desc(auditLogs.createdAt))
-    .limit(8)
+  const lowStockItems = await safeQuery(
+    () =>
+      db
+        .select({
+          id: inventoryItems.id,
+          name: inventoryItems.name,
+          sku: inventoryItems.sku,
+          quantity: inventoryItems.quantity,
+          minStock: inventoryItems.minStock,
+          categoryName: categories.name,
+        })
+        .from(inventoryItems)
+        .leftJoin(categories, eq(inventoryItems.categoryId, categories.id))
+        .where(lte(inventoryItems.quantity, inventoryItems.minStock))
+        .orderBy(inventoryItems.quantity)
+        .limit(6),
+    [],
+    "loading low stock items",
+  )
+
+  const recentRequests = await safeQuery(
+    () =>
+      db
+        .select({
+          id: requests.id,
+          status: requests.status,
+          purpose: requests.purpose,
+          createdAt: requests.createdAt,
+          requesterName: users.fullName,
+          requesterEmail: users.email,
+        })
+        .from(requests)
+        .leftJoin(users, eq(requests.requesterId, users.id))
+        .orderBy(desc(requests.createdAt))
+        .limit(5),
+    [],
+    "loading recent requests",
+  )
+
+  const recentActivity = await safeQuery(
+    () =>
+      db
+        .select({
+          id: auditLogs.id,
+          action: auditLogs.action,
+          entityType: auditLogs.entityType,
+          createdAt: auditLogs.createdAt,
+          actorName: users.fullName,
+          actorEmail: users.email,
+        })
+        .from(auditLogs)
+        .leftJoin(users, eq(auditLogs.actorId, users.id))
+        .orderBy(desc(auditLogs.createdAt))
+        .limit(8),
+    [],
+    "loading recent activity",
+  )
 
   const metrics = [
     {
       label: "Inventory items",
-      value: stats?.itemCount ?? 0,
-      hint: `${stats?.totalQty ?? 0} units in stock`,
+      value: statsRow.itemCount,
+      hint: `${statsRow.totalQty} units in stock`,
       icon: Package,
     },
     {
       label: "Total value",
-      value: formatCurrency(stats?.totalValue ?? 0),
+      value: formatCurrency(statsRow.totalValue),
       hint: "Across all categories",
       icon: DollarSign,
     },
     {
       label: "Low / out of stock",
-      value: `${stats?.lowStock ?? 0}`,
-      hint: `${stats?.outOfStock ?? 0} fully out`,
+      value: `${statsRow.lowStock}`,
+      hint: `${statsRow.outOfStock} fully out`,
       icon: AlertTriangle,
       tone: "warn" as const,
     },
     {
       label: "Pending requests",
-      value: pending ?? 0,
+      value: pending,
       hint: "Awaiting approval",
       icon: ClipboardList,
     },
