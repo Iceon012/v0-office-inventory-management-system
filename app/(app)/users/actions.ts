@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { eq } from "drizzle-orm"
 import { db, users, type UserRole } from "@/lib/db"
-import { requireRole } from "@/lib/auth"
+import { requireRole } from "@/lib/auth.server"
 import { logAction } from "@/lib/audit"
 
 export async function setUserRoleAction(userId: string, role: UserRole) {

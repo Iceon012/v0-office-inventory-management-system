@@ -6,7 +6,7 @@ import {
   requests,
   requestItems,
 } from "@/lib/db"
-import { requireUser } from "@/lib/auth"
+import { requireUser } from "@/lib/auth.server"
 import { PageHeader } from "@/components/app/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ReportsCharts } from "@/components/app/reports-charts"

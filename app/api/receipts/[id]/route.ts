@@ -8,7 +8,8 @@ import {
   inventoryItems,
   users,
 } from "@/lib/db"
-import { requireUser, canApproveRequests } from "@/lib/auth"
+import { requireUser } from "@/lib/auth.server"
+import { canApproveRequests } from "@/lib/auth"
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
