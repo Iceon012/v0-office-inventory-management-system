@@ -2,6 +2,7 @@ import Link from "next/link"
 import { desc, eq } from "drizzle-orm"
 import { db, notifications } from "@/lib/db"
 import { requireUser } from "@/lib/auth.server"
+import { safeQuery } from "@/lib/db/safe-query"
 import { PageHeader } from "@/components/app/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatDate } from "@/lib/format"
@@ -14,12 +15,17 @@ export const dynamic = "force-dynamic"
 
 export default async function NotificationsPage() {
   const user = await requireUser()
-  const items = await db
-    .select()
-    .from(notifications)
-    .where(eq(notifications.userId, user.id))
-    .orderBy(desc(notifications.createdAt))
-    .limit(200)
+  const items = await safeQuery(
+    () =>
+      db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, user.id))
+        .orderBy(desc(notifications.createdAt))
+        .limit(200),
+    [],
+    "loading notifications",
+  )
 
   const unread = items.filter((n) => !n.read).length
 
